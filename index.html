@@ -161,10 +161,31 @@
     opacity: 0; pointer-events: none; transition: .25s; white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* falling petals in the white areas (behind the pink card) */
+  .petals { position: fixed; inset: 4px; overflow: hidden; pointer-events: none; }
+  .petal {
+    position: absolute; top: -20px;
+    width: var(--s); height: var(--s);
+    border-radius: 150% 0 150% 0;
+    background: linear-gradient(120deg, #ffc0c0, #ffb0b0 55%, #e0a0a0);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,.6);
+    animation:
+      petal-fall var(--fall) linear forwards,
+      petal-sway var(--sway) ease-in-out infinite alternate;
+  }
+  .petal-wrap { position: absolute; top: 0; left: var(--x); height: 100%; animation: var(--blow) var(--fall) ease-in-out forwards; }
+  @keyframes petal-fall { 0% { top: -20px; opacity: .95; } 85% { opacity: .85; } 100% { top: 100%; opacity: 0; } }
+  @keyframes petal-sway { 0% { transform: rotate(-15deg) translateX(-6px); } 100% { transform: rotate(40deg) translateX(6px); } }
+  @keyframes blow-left  { 0% { transform: translateX(0); } 100% { transform: translateX(-60px); } }
+  @keyframes blow-right { 0% { transform: translateX(0); } 100% { transform: translateX(60px); } }
+  @keyframes blow-none  { 0%,100% { transform: translateX(0); } 50% { transform: translateX(14px); } }
+  @media (prefers-reduced-motion: reduce) { .petals { display: none; } }
 </style>
 </head>
 <body>
 <div class="frame"></div>
+<div class="petals" id="petals" aria-hidden="true"></div>
 <div class="card" id="card"><div class="inner">
   <svg class="bow" viewBox="0 0 34 22" aria-hidden="true">
     <path d="M17 11 C11 3, 3 2, 3 8 C3 14, 11 14, 17 11 Z" fill="#ffc0c0" stroke="#e0a0a0" stroke-width="1.2"/>
@@ -410,6 +431,31 @@
     if (e.code === 'Space') { e.preventDefault(); $('mainBtn').click(); }
   });
 
+
+  // ---------- falling petals ----------
+  (function petals() {
+    const box = $('petals'); if (!box) return;
+    const blows = ['blow-left', 'blow-right', 'blow-none'];
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    function spawn() {
+      if (document.hidden || box.childElementCount > 18) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'petal-wrap';
+      const fall = rnd(7, 12);
+      wrap.style.setProperty('--x', rnd(0, 100) + '%');
+      wrap.style.setProperty('--fall', fall + 's');
+      wrap.style.setProperty('--blow', blows[Math.floor(Math.random() * blows.length)]);
+      const p = document.createElement('div');
+      p.className = 'petal';
+      p.style.setProperty('--s', rnd(9, 15).toFixed(1) + 'px');
+      p.style.setProperty('--fall', fall + 's');
+      p.style.setProperty('--sway', rnd(1.6, 3.2).toFixed(2) + 's');
+      p.addEventListener('animationend', e => { if (e.animationName === 'petal-fall') wrap.remove(); });
+      wrap.appendChild(p); box.appendChild(wrap);
+    }
+    for (let i = 0; i < 5; i++) setTimeout(spawn, i * 300);
+    setInterval(spawn, 650);
+  })();
   applyTheme(); renderSettings(); render();
   setInterval(render, 250);
 })();
